@@ -2,12 +2,14 @@
 """
 site-watcher: 指定したWebページの変更を検知して、サイトごとにRSSフィードを生成する。
 
-流れ:
-  1. config/sites.yaml から監視対象を読み込む
-  2. 各サイトを取得し、指定セレクタ（無ければ本文全体）のテキストを抽出
-  3. 前回のハッシュ（state.json）と比較し、変わっていれば「更新イベント」を記録
-  4. サイトごとに docs/feeds/<id>.xml というRSSフィードを書き出す
-  5. docs/index.html に一覧ページを生成する
+2つのモードがある:
+  - mode: "diff" (デフォルト): ページ全体（またはセレクタで指定した範囲）のテキストを
+      ハッシュ比較し、変化があれば「更新されました」という1件の通知アイテムを追加する。
+      更新お知らせページなど、個々の記事リンクを持たないページ向け。
+  - mode: "list": ブログ一覧ページのように「記事タイトル+リンク」が並んでいるページ向け。
+      heading_selector に一致する要素（見出し内のリンク）を全部拾い、
+      記事ごとにRSSアイテムを作る。初回実行時から現在ある記事は全部フィードに載る。
+      次回以降、新しく増えたリンクだけが新着として追加される（消えた記事は残り続ける）。
 
 GitHub Actions から定期実行される想定。state.json と docs/ はリポジトリにコミットされ、
 docs/ が GitHub Pages で公開されることで、生成されたXMLが外部からURLで読めるようになる。
@@ -19,6 +21,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urljoin
 from xml.sax.saxutils import escape
 
 import requests
@@ -31,10 +34,8 @@ STATE_PATH = ROOT / "state.json"
 DOCS_DIR = ROOT / "docs"
 FEEDS_DIR = DOCS_DIR / "feeds"
 
-# フィードに残しておく最大アイテム数（サイトごと）
-MAX_ITEMS = 30
+MAX_ITEMS = 50
 
-# GitHub PagesのベースURL。ワークフロー実行時に環境変数から上書きされる。
 import os
 PAGES_BASE_URL = os.environ.get("PAGES_BASE_URL", "").rstrip("/")
 
@@ -44,6 +45,12 @@ HEADERS = {
         "+https://github.com/) personal RSS generator"
     )
 }
+
+# 「June 30, 2026」のような日付テキストを見つけるための正規表現
+DATE_RE = re.compile(
+    r"(January|February|March|April|May|June|July|August|September|October|November|December)"
+    r"\s+\d{1,2},\s+\d{4}"
+)
 
 
 def load_config():
@@ -70,15 +77,25 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, indent=2)
 
 
-def fetch_text(url: str, selector: str) -> str:
+def fetch_soup(url: str) -> BeautifulSoup:
     resp = requests.get(url, headers=HEADERS, timeout=20)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "lxml")
-
-    # scriptやstyleは比較対象から除外（中身が変わってもページの見た目は変わらないため）
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
+    return soup
 
+
+def text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# diff モード（ページ全体/一部の変更検知）
+# ---------------------------------------------------------------------------
+
+def process_diff_site(site: dict, soup: BeautifulSoup, site_state: dict) -> dict:
+    selector = (site.get("selector") or "").strip()
     if selector:
         node = soup.select_one(selector)
         if node is None:
@@ -87,24 +104,138 @@ def fetch_text(url: str, selector: str) -> str:
     else:
         body = soup.body or soup
         text = body.get_text("\n", strip=True)
-
-    # 空白行を整理
     text = re.sub(r"\n{2,}", "\n", text)
-    return text
+
+    new_hash = text_hash(text)
+    old_hash = site_state.get("hash")
+
+    if old_hash is None:
+        print("  -> 初回実行のため、ベースラインとして保存します。")
+    elif new_hash != old_hash:
+        print("  -> 変更を検知しました。フィードに追加します。")
+        now = datetime.now(timezone.utc)
+        snippet = text[:400].replace("\n", " ")
+        item = {
+            "title": f"{site['name']} が更新されました（{now.strftime('%Y-%m-%d %H:%M UTC')}）",
+            "link": site["url"],
+            "guid": f"{site['id']}-{new_hash[:12]}-{int(now.timestamp())}",
+            "pubDate": now.strftime("%a, %d %b %Y %H:%M:%S +0000"),
+            "description": snippet,
+        }
+        site_state.setdefault("items", []).insert(0, item)
+        site_state["items"] = site_state["items"][:MAX_ITEMS]
+    else:
+        print("  -> 変更なし。")
+
+    site_state["hash"] = new_hash
+    return site_state
 
 
-def text_hash(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+# ---------------------------------------------------------------------------
+# list モード（記事一覧ページ）
+# ---------------------------------------------------------------------------
+
+def parse_article_date(heading_tag) -> datetime | None:
+    """見出しタグの直後にある兄弟要素から日付らしきテキストを探す"""
+    sib = heading_tag
+    for _ in range(5):
+        sib = sib.find_next_sibling()
+        if sib is None:
+            break
+        text = sib.get_text(" ", strip=True)
+        m = DATE_RE.search(text)
+        if m:
+            try:
+                return datetime.strptime(m.group(0), "%B %d, %Y").replace(
+                    tzinfo=timezone.utc
+                )
+            except ValueError:
+                pass
+    return None
+
+
+def process_list_site(site: dict, soup: BeautifulSoup, site_state: dict) -> dict:
+    heading_selector = site.get("heading_selector") or "h2 a, h3 a"
+    base_url = site["url"]
+
+    anchors = soup.select(heading_selector)
+    if not anchors:
+        raise ValueError(
+            f"heading_selector '{heading_selector}' に一致する記事が見つかりません"
+        )
+
+    articles = site_state.get("articles", {})  # link -> {title, link, pubDate}
+    now = datetime.now(timezone.utc)
+    seen_links = set()
+
+    for a in anchors:
+        title = a.get_text(strip=True)
+        href = a.get("href")
+        if not title or not href:
+            continue
+        link = urljoin(base_url, href)
+        if link in seen_links:
+            continue
+        seen_links.add(link)
+
+        if link in articles:
+            # 既存記事はタイトルだけ最新化（日付やguidは変えない）
+            articles[link]["title"] = title
+            continue
+
+        # 新規記事: ページ上の見出しの近くから日付を探す。見つからなければ「今」を使う。
+        heading_tag = a.find_parent(["h1", "h2", "h3", "h4"]) or a
+        article_date = parse_article_date(heading_tag) or now
+
+        print(f"  -> 新しい記事を検知: {title}")
+        articles[link] = {
+            "title": title,
+            "link": link,
+            "pubDate_iso": article_date.isoformat(),
+        }
+
+    site_state["articles"] = articles
+    return site_state
+
+
+def build_rss_items_from_state(site_state: dict, mode: str) -> list:
+    if mode == "list":
+        articles = list(site_state.get("articles", {}).values())
+        # 日付の新しい順に並べる
+        def sort_key(a):
+            try:
+                return datetime.fromisoformat(a["pubDate_iso"])
+            except Exception:  # noqa: BLE001
+                return datetime.min.replace(tzinfo=timezone.utc)
+
+        articles.sort(key=sort_key, reverse=True)
+        items = []
+        for a in articles[:MAX_ITEMS]:
+            try:
+                dt = datetime.fromisoformat(a["pubDate_iso"])
+            except Exception:  # noqa: BLE001
+                dt = datetime.now(timezone.utc)
+            items.append(
+                {
+                    "title": a["title"],
+                    "link": a["link"],
+                    "guid": a["link"],
+                    "pubDate": dt.strftime("%a, %d %b %Y %H:%M:%S +0000"),
+                    "description": a["title"],
+                }
+            )
+        return items
+    else:
+        return site_state.get("items", [])[:MAX_ITEMS]
 
 
 def build_rss(site: dict, items: list) -> str:
-    """itemsは新しい順（先頭が最新）のリスト。各itemは{title, link, pubDate, description}"""
     now_rfc822 = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")
     site_name = escape(site["name"])
     site_url = escape(site["url"])
 
     item_xml_parts = []
-    for it in items[:MAX_ITEMS]:
+    for it in items:
         item_xml_parts.append(
             f"""    <item>
       <title>{escape(it['title'])}</title>
@@ -119,7 +250,7 @@ def build_rss(site: dict, items: list) -> str:
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
-    <title>{site_name}（更新監視）</title>
+    <title>{site_name}</title>
     <link>{site_url}</link>
     <description>{site_name} の更新を自動検知して生成したフィードです。</description>
     <lastBuildDate>{now_rfc822}</lastBuildDate>
@@ -175,54 +306,35 @@ def main():
         site_id = site["id"]
         name = site.get("name", site_id)
         url = site["url"]
-        selector = (site.get("selector") or "").strip()
+        mode = (site.get("mode") or "diff").strip()
 
-        print(f"[check] {name} ({url})")
-        site_state = state.get(site_id, {"hash": None, "items": []})
+        print(f"[check] {name} ({url}) mode={mode}")
+        site_state = state.get(site_id, {})
 
         try:
-            text = fetch_text(url, selector)
+            soup = fetch_soup(url)
+            if mode == "list":
+                site_state = process_list_site(site, soup, site_state)
+            else:
+                site_state = process_diff_site(site, soup, site_state)
         except Exception as e:  # noqa: BLE001
-            print(f"  !! 取得エラー: {e}", file=sys.stderr)
+            print(f"  !! エラー: {e}", file=sys.stderr)
             any_error = True
-            # 取得エラーでも既存フィードは保持して再生成だけしておく
-            rss = build_rss(site, site_state.get("items", []))
+            items = build_rss_items_from_state(site_state, mode)
+            rss = build_rss(site, items)
             (FEEDS_DIR / f"{site_id}.xml").write_text(rss, encoding="utf-8")
+            state[site_id] = site_state
             continue
 
-        new_hash = text_hash(text)
-        old_hash = site_state.get("hash")
-
-        if old_hash is None:
-            # 初回実行: ベースラインとして保存するだけ。アイテムは追加しない。
-            print("  -> 初回実行のため、ベースラインとして保存します。")
-        elif new_hash != old_hash:
-            print("  -> 変更を検知しました。フィードに追加します。")
-            now = datetime.now(timezone.utc)
-            snippet = text[:400].replace("\n", " ")
-            item = {
-                "title": f"{name} が更新されました（{now.strftime('%Y-%m-%d %H:%M UTC')}）",
-                "link": url,
-                "guid": f"{site_id}-{new_hash[:12]}-{int(now.timestamp())}",
-                "pubDate": now.strftime("%a, %d %b %Y %H:%M:%S +0000"),
-                "description": snippet,
-            }
-            site_state.setdefault("items", []).insert(0, item)
-            site_state["items"] = site_state["items"][:MAX_ITEMS]
-        else:
-            print("  -> 変更なし。")
-
-        site_state["hash"] = new_hash
         state[site_id] = site_state
-
-        rss = build_rss(site, site_state.get("items", []))
+        items = build_rss_items_from_state(site_state, mode)
+        rss = build_rss(site, items)
         (FEEDS_DIR / f"{site_id}.xml").write_text(rss, encoding="utf-8")
 
     (DOCS_DIR / "index.html").write_text(build_index_html(sites), encoding="utf-8")
     save_state(state)
 
     if any_error:
-        # エラーがあってもワークフロー全体は失敗させない（一部サイトの一時的な障害を許容）
         print("一部サイトの取得に失敗しましたが、処理を続行しました。", file=sys.stderr)
 
 
