@@ -1,0 +1,41 @@
+{
+  "aakar_blog": {
+    "articles": {
+      "https://aakar.studio/blog/best-email-marketing-services": {
+        "title": "Best Email Marketing Services for D2C and Shopify Brands (2026 Guide)",
+        "link": "https://aakar.studio/blog/best-email-marketing-services",
+        "pubDate_iso": "2026-06-30T00:00:00+00:00"
+      },
+      "https://aakar.studio/blog/shopify-klaviyo-flows-guide": {
+        "title": "Top 5 Klaviyo Flows for Shopify That Double E-Commerce Revenue",
+        "link": "https://aakar.studio/blog/shopify-klaviyo-flows-guide",
+        "pubDate_iso": "2026-06-29T00:00:00+00:00"
+      },
+      "https://aakar.studio/blog/supplement-retention-marketing-strategy": {
+        "title": "Retention Marketing Strategy: How Supplement Brands Build Lifetime Customer Loyalty",
+        "link": "https://aakar.studio/blog/supplement-retention-marketing-strategy",
+        "pubDate_iso": "2026-06-29T00:00:00+00:00"
+      },
+      "https://aakar.studio/blog/hiring-d2c-email-marketing-agency": {
+        "title": "How to Hire the Best D2C Email Marketing Agency to Scale Your Store",
+        "link": "https://aakar.studio/blog/hiring-d2c-email-marketing-agency",
+        "pubDate_iso": "2026-06-29T00:00:00+00:00"
+      },
+      "https://aakar.studio/blog/short-tail-vs-long-tail-keywords-guide": {
+        "title": "Short-Tail vs. Long-Tail Keywords: The Secret to High-Converting Content Strategy",
+        "link": "https://aakar.studio/blog/short-tail-vs-long-tail-keywords-guide",
+        "pubDate_iso": "2026-06-29T00:00:00+00:00"
+      },
+      "https://aakar.studio/blog/email-marketing-list-hygiene-guide": {
+        "title": "Email Marketing List Hygiene: How to Clean Your List and Boost Deliverability",
+        "link": "https://aakar.studio/blog/email-marketing-list-hygiene-guide",
+        "pubDate_iso": "2026-06-29T00:00:00+00:00"
+      },
+      "https://aakar.studio/blog/content-first-email-marketing": {
+        "title": "Content-First Email Marketing: How to Sell More Without Spamming Discounts",
+        "link": "https://aakar.studio/blog/content-first-email-marketing",
+        "pubDate_iso": "2026-06-29T00:00:00+00:00"
+      }
+    }
+  }
+}
