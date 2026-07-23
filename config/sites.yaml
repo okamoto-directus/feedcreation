@@ -1,22 +1,5 @@
-# 監視したいサイトをここに追加してください。
-# id       : 半角英数字のみ。フィードファイル名 (docs/feeds/<id>.xml) になります。
-# name     : フィードのタイトルに使う名前。
-# url      : 監視対象のページURL。
-# selector : （任意）CSSセレクタ。指定すると、そのページ内の特定の要素だけを
-#            監視対象にします（例: ニュース一覧の <div id="news-list"> など）。
-#            省略した場合はページ本文全体（<body>）を監視します。
-#
-# selectorの調べ方:
-#   Chromeでページを開く → 監視したい部分を右クリック → 「検証」→
-#   ハイライトされた要素を右クリック → Copy → Copy selector
-
-- id: aakarstudioblog
-  name: aakar studio blog
+- id: aakar_blog
+  name: "AAKAR.studio Blog"
   url: "https://aakar.studio/blog"
-  selector: ""
-
-# 複数サイトを登録する場合は、このように追記していきます。
-# - id: another_site
-#   name: "別サイトのお知らせ"
-#   url: "https://another-site.example.com/updates"
-#   selector: "#announcement-list"
+  mode: "list"
+  heading_selector: "h2 a"
