@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>aakar studio blog（更新監視）</title>
+    <link>https://aakar.studio/blog</link>
+    <description>aakar studio blog の更新を自動検知して生成したフィードです。</description>
+    <lastBuildDate>Thu, 23 Jul 2026 05:07:27 +0000</lastBuildDate>
+
+  </channel>
+</rss>
