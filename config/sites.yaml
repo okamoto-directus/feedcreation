@@ -10,10 +10,10 @@
 #   Chromeでページを開く → 監視したい部分を右クリック → 「検証」→
 #   ハイライトされた要素を右クリック → Copy → Copy selector
 
-- id: example_news
-  name: "サンプル：更新情報ページ"
-  url: "https://example.com/news"
-  selector: ""   # 空なら本文全体を監視
+- id: aakarstudioblog
+  name: aakar studio blog
+  url: "https://aakar.studio/blog"
+  selector: ""
 
 # 複数サイトを登録する場合は、このように追記していきます。
 # - id: another_site
