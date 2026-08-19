@@ -3,3 +3,8 @@
   url: "https://aakar.studio/blog"
   mode: "list"
   heading_selector: "h2 a"
+- id: Flodesk_blog
+  name: "Flodesk_blog"
+  url: "https://flodesk.com/blog/"
+  mode: "list"
+  heading_selector: "h2 a"
