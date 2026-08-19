@@ -52,5 +52,64 @@
         "pubDate_iso": "2026-08-14T00:00:00+00:00"
       }
     }
+  },
+  "Flodesk_blog": {
+    "articles": {
+      "https://flodesk.com/blog/how-to-clean-your-email-list/": {
+        "title": "How to Clean Your Email List (and Why It Grows Your Reach)",
+        "link": "https://flodesk.com/blog/how-to-clean-your-email-list/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/what-is-a-checkout-page/": {
+        "title": "What is a checkout page? (and why you need one if you’re selling anything online)",
+        "link": "https://flodesk.com/blog/what-is-a-checkout-page/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/is-email-marketing-still-worth-it/": {
+        "title": "Is email marketing still worth it in 2026?",
+        "link": "https://flodesk.com/blog/is-email-marketing-still-worth-it/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/email-subject-lines/": {
+        "title": "Email subject lines: what actually gets your emails opened",
+        "link": "https://flodesk.com/blog/email-subject-lines/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/what-is-flodesk-studio/": {
+        "title": "The AI world is building assistants. We built a studio.",
+        "link": "https://flodesk.com/blog/what-is-flodesk-studio/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/what-should-i-send-to-my-email-list/": {
+        "title": "What should I send to my email list?",
+        "link": "https://flodesk.com/blog/what-should-i-send-to-my-email-list/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/email-authentication-spf-dkim-dmarc/": {
+        "title": "Email authentication explained: SPF, DKIM, and DMARC for non-techy people",
+        "link": "https://flodesk.com/blog/email-authentication-spf-dkim-dmarc/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/email-marketing-for-small-businesses/": {
+        "title": "Email marketing for small businesses: a beginner’s guide",
+        "link": "https://flodesk.com/blog/email-marketing-for-small-businesses/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/flodesk-view-options/": {
+        "title": "How to use Flodesk’s view options to work the way you think",
+        "link": "https://flodesk.com/blog/flodesk-view-options/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/why-emails-go-to-spam/": {
+        "title": "Why Your Emails Are Going to Spam (And How to Fix It)",
+        "link": "https://flodesk.com/blog/why-emails-go-to-spam/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      },
+      "https://flodesk.com/blog/email-list-segmentation/": {
+        "title": "Who Should You Be Emailing? A Complete Guide to Email List Segmentation",
+        "link": "https://flodesk.com/blog/email-list-segmentation/",
+        "pubDate_iso": "2026-08-19T22:49:37.167799+00:00"
+      }
+    }
   }
 }
